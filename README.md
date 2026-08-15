@@ -14,7 +14,7 @@ Ready-to-use Docker container for [ViperServer](https://github.com/viperproject/
 ## Quickstart
 
 ```bash
-docker run --rm -p 12345:12345 ghcr.io/theChrisIn/dildo-docker --port 12345
+docker run --rm -p 12345:12345 ghcr.io/thechrisin/dildo-docker --port 12345
 ```
 
 Point `go-dildo`'s config at `http://localhost:12345`.
@@ -26,7 +26,7 @@ Point `go-dildo`'s config at `http://localhost:12345`.
 ### 1. Silicon Backend (Default)
 
 ```bash
-docker run --rm -p 12345:12345 ghcr.io/theChrisIn/dildo-docker:silicon --port 12345
+docker run --rm -p 12345:12345 ghcr.io/thechrisin/dildo-docker:silicon --port 12345
 ```
 
 ### 2. Carbon Backend
@@ -34,7 +34,7 @@ docker run --rm -p 12345:12345 ghcr.io/theChrisIn/dildo-docker:silicon --port 12
 Uses verification condition generation via Boogie and Z3.
 
 ```bash
-docker run --rm -p 12345:12345 ghcr.io/theChrisIn/dildo-docker:carbon --port 12345
+docker run --rm -p 12345:12345 ghcr.io/thechrisin/dildo-docker:carbon --port 12345
 ```
 
 ---
@@ -82,7 +82,7 @@ Three workflows chained by trigger, each doing one thing:
 
 1. **`upstream-check.yml`** runs weekly (and on manual dispatch): checks the latest `viperproject/viperserver` release, builds and tests this image against it if it's newer than what's pinned, and if that passes, commits the bumped `VIPERSERVER_REF` directly to `main`.
 2. **`bump.yml`** picks up that commit the same as any other change and creates a new version tag.
-3. **`release.yml`** triggers on that tag, builds both backends, tests them again, and publishes to `ghcr.io/theChrisIn/dildo-docker`: `latest` / `silicon` / `v<version>` for Silicon, `carbon` / `carbon-v<version>` for Carbon.
+3. **`release.yml`** triggers on that tag, builds both backends, tests them again, and publishes to `ghcr.io/thechrisin/dildo-docker`: `latest` / `silicon` / `v<version>` for Silicon, `carbon` / `carbon-v<version>` for Carbon.
 
 Publishing is tied to the tag, not to `upstream-check.yml` directly, so any version bump gets published, not just upstream-triggered ones.
 
