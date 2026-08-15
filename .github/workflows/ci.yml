@@ -1,0 +1,87 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  validate-commits:
+    name: Validate Conventional Commits
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - run: pip install commitizen
+
+      - name: Check commit messages
+        run: |
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            cz check --rev-range origin/${{ github.base_ref }}..HEAD
+          elif [ "${{ github.event.before }}" = "0000000000000000000000000000000000000000" ]; then
+            # First push to the repo: no "before" commit exists yet, so
+            # github.event.before is git's all-zero placeholder SHA, which
+            # is not a valid revision. Check from the root commit instead.
+            cz check --rev-range $(git rev-list --max-parents=0 HEAD)..${{ github.sha }}
+          else
+            cz check --rev-range ${{ github.event.before }}..${{ github.sha }}
+          fi
+
+  build-and-test-silicon:
+    name: Build & Test Silicon Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build Silicon container image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          build-args: |
+            IMAGE_VERSION=${{ github.sha }}
+          load: true
+          tags: dildo-docker:silicon
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test CLI help output
+        run: docker run --rm dildo-docker:silicon --help
+
+  build-and-test-carbon:
+    name: Build & Test Carbon Backend
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build Carbon container image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile.carbon
+          build-args: |
+            IMAGE_VERSION=${{ github.sha }}
+          load: true
+          tags: dildo-docker:carbon
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Test CLI help output
+        run: docker run --rm dildo-docker:carbon --help

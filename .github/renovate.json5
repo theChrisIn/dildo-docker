@@ -1,0 +1,28 @@
+{
+	$schema: "https://docs.renovatebot.com/renovate-schema.json",
+	extends: [
+		"config:best-practices",
+		":disableRateLimiting",
+		":automergeBranch",
+		":pinDependencies",
+		":separatePatchReleases",
+	],
+	semanticCommits: "enabled",
+	semanticCommitType: "chore",
+	semanticCommitScope: "deps",
+	suppressNotifications: ["prIgnoreNotification"],
+	packageRules: [
+		{
+			description: "Auto-merge GitHub Actions patch/minor updates",
+			matchManagers: ["github-actions"],
+			matchUpdateTypes: ["minor", "patch"],
+			automerge: true,
+		},
+		{
+			description: "Auto-merge Docker base image digest pins",
+			matchManagers: ["dockerfile"],
+			matchUpdateTypes: ["pinDigest"],
+			automerge: true,
+		},
+	],
+}

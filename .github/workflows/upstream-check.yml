@@ -1,0 +1,65 @@
+name: Check upstream ViperServer release
+
+on:
+  schedule:
+    - cron: "0 0 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  check-upstream:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Fetch latest upstream ViperServer release tag
+        id: upstream
+        run: |
+          LATEST=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" https://api.github.com/repos/viperproject/viperserver/releases/latest | jq -r '.tag_name')
+          if [ -z "$LATEST" ] || [ "$LATEST" = "null" ]; then
+            echo "Failed to fetch latest upstream release" && exit 1
+          fi
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+
+      - name: Check currently pinned ref
+        id: current
+        run: |
+          CURRENT=$(grep -oP '(?<=ARG VIPERSERVER_REF=)\S+' Dockerfile)
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        if: steps.upstream.outputs.latest != steps.current.outputs.current
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build and test Silicon image against the new ref
+        if: steps.upstream.outputs.latest != steps.current.outputs.current
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          build-args: |
+            VIPERSERVER_REF=${{ steps.upstream.outputs.latest }}
+          load: true
+          tags: dildo-docker:upstream-check
+
+      - name: Smoke test the new ref
+        if: steps.upstream.outputs.latest != steps.current.outputs.current
+        run: docker run --rm dildo-docker:upstream-check --help
+
+      - name: Bump the pinned ref and let bump.yml pick up the commit
+        if: steps.upstream.outputs.latest != steps.current.outputs.current
+        run: |
+          sed -i "s/ARG VIPERSERVER_REF=.*/ARG VIPERSERVER_REF=${{ steps.upstream.outputs.latest }}/" Dockerfile Dockerfile.carbon
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Dockerfile Dockerfile.carbon
+          git commit -m "build: bump VIPERSERVER_REF to ${{ steps.upstream.outputs.latest }}"
+          git push
+
+      # This workflow only detects, tests, and bumps the pinned ref. Publishing
+      # to GHCR happens in release.yml, triggered by the version tag bump.yml
+      # creates from the commit above.
