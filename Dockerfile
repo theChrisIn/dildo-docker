@@ -1,4 +1,4 @@
-ARG VIPERSERVER_REF=v-2026-08-13-0738
+ARG VIPERSERVER_REF=v.26.02-release
 ARG IMAGE_VERSION=dev
 
 FROM golang:1.26-alpine AS shim-builder
